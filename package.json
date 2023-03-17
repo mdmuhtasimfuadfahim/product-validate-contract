@@ -9,7 +9,8 @@
     "Hardhat",
     "Solidity",
     "Ethers",
-    "HardhatGasReporter"
+    "HardhatGasReporter",
+    "SolidityCoverage"
   ],
   "scripts": {
     "compile": "hardhat compile",
