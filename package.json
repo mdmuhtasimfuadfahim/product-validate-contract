@@ -8,7 +8,9 @@
   "keyowrs": [
     "Hardhat",
     "Solidity",
-    "Ethers"
+    "Ethers",
+    "Solidity Coverage",
+    "Hardhat Gas Reporter"
   ],
   "scripts": {
     "compile": "hardhat compile",
