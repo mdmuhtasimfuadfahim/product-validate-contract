@@ -5,6 +5,11 @@
   "main": "index.js",
   "author": "Md. Muhtasim Fuad Fahim <muhtasim.fahim.98@gmail.com>",
   "license": "MIT",
+  "keyowrs": [
+    "Hardhat",
+    "Solidity",
+    "Ethers"
+  ],
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
