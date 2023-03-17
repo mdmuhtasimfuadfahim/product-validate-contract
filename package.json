@@ -11,8 +11,6 @@
     "Ethers",
     "HardhatGasReporter",
     "SolidityCoverage"
-
-    
   ],
   "scripts": {
     "compile": "hardhat compile",
