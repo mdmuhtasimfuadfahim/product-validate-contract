@@ -5,12 +5,13 @@ contract ProductValidation {
     uint256 public currentIndustryId;
     uint256 public currentProductId;
 
-    address payable trustedParty; // the trusted party who will add the industries
+    address payable trustedParty; // the trusted party who will add the industry
+    address[] public industryAddress; // industry address to track the address inserted by trusted party
 
     /*╔═════════════════════════════╗
       ║          Structs            ║
       ╚═════════════════════════════╝*/
-    struct product {
+    struct Product {
         uint256 foodId; //should be a uniqueID
         string productExpiurationDate; // given by farmer
         string nameOfOwner; // given by farmer
@@ -28,8 +29,8 @@ contract ProductValidation {
         // you can store more info if needed
     }
 
-    Industry[] public industries; // array of industries
-    mapping(uint256 => product) public productInfo;
+    mapping(address => Industry) public industry; // store structs of Industry in a mapping
+    mapping(uint256 => Product) public productInfo; // store structs of product in a mapping
 
     constructor(
         address payable _trustedParty,
@@ -61,15 +62,42 @@ contract ProductValidation {
     );
 
     /*╔═════════════════════════════╗
-      ║       Helper Function       ║
+      ║      Helper Functions       ║
       ╚═════════════════════════════╝*/
     function _getTrustedParty(address _trustedParty)
         internal
         view
-        returns (bool)
+        returns (bool success)
     {
-        if (_trustedParty == trustedParty) return true;
-        else return false;
+        require(
+            _trustedParty == trustedParty,
+            "You are not permitted to call this function :D"
+        );
+        if (_trustedParty == trustedParty) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function _getIndustries(address _industryWalletAddress)
+        internal
+        view
+        returns (bool success)
+    {
+        require(
+            industry[_industryWalletAddress].industryWalletAddress ==
+                _industryWalletAddress,
+            "You are not permitted to call this function :D"
+        );
+        if (
+            industry[_industryWalletAddress].industryWalletAddress ==
+            _industryWalletAddress
+        ) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /*
@@ -124,7 +152,7 @@ contract ProductValidation {
     /*****************************************************************
      *  create industry list who will be allowed to add product info  *
      *****************************************************************/
-    function createIndustries(
+    function createindustry(
         uint256 _insdustryId,
         string memory _insdustryName,
         address payable _trustedParty,
@@ -136,40 +164,44 @@ contract ProductValidation {
         isTrustedParty
         isTrustedPartyWalletValid(_trustedParty)
         isIndustryWalletValid(_industryWalletAddress)
+        returns (string memory)
     {
-        if (
-            // check if the truestParty wallet address and industryWalletAddress are not same
-            _trustedParty != _industryWalletAddress
-        ) {
-            if (
-                // check if the trusted party address is the msg.sender or not
-                _getTrustedParty(_trustedParty)
-            ) {
-                currentIndustryId += 1;
-                industries.push(
-                    Industry({
-                        insdustryId: _insdustryId,
-                        insdustryName: _insdustryName,
-                        insdustryID: currentIndustryId, // at first iteration currentIndustryId will be 1+
-                        industryWalletAddress: _industryWalletAddress
-                    })
-                );
+        // check if the truestParty wallet address and industryWalletAddress are not same
+        require(
+            _trustedParty != _industryWalletAddress,
+            "Trusted party address and industry wallet address cannot be same"
+        );
 
-                // industryAdded event call to notify all nodes in the blockchain
-                emit industryAdded(
-                    _insdustryId,
-                    _insdustryName,
-                    currentIndustryId,
-                    _industryWalletAddress
-                );
-            } else {
-                revert("You are not allowed to add industries");
-            }
-        } else {
-            revert(
-                "Trusted party address and industries wallet address cannot be same"
-            );
-        }
+        // check if the trusted party address is the msg.sender or not
+        require(
+            _getTrustedParty(_trustedParty),
+            "You are not allowed to add any industry"
+        );
+
+        // check if the industry is already exists in the list or not
+        require(
+            industry[_industryWalletAddress].industryWalletAddress !=
+                _industryWalletAddress,
+            "This industry is already exists in the list"
+        );
+
+        currentIndustryId += 1;
+        industry[_industryWalletAddress].insdustryId = _insdustryId;
+        industry[_industryWalletAddress].insdustryName = _insdustryName;
+        industry[_industryWalletAddress].insdustryID = currentIndustryId;
+        industry[_industryWalletAddress]
+            .industryWalletAddress = _industryWalletAddress;
+        industryAddress.push(_industryWalletAddress);
+
+        // industryAdded event call to notify all nodes in the blockchain
+        emit industryAdded(
+            _insdustryId,
+            _insdustryName,
+            currentIndustryId,
+            _industryWalletAddress
+        );
+
+        return "Industry successfully added in Blockchain. Cheers !!";
     }
 
     /*╔══════════════════════════════╗
@@ -185,35 +217,36 @@ contract ProductValidation {
         string memory _nameOfOwner,
         uint256 _productAmount,
         address payable _industryWalletAddress
-    ) public payable isIndustryWalletValid(_industryWalletAddress) {
+    )
+        public
+        payable
+        isIndustryWalletValid(_industryWalletAddress)
+        returns (string memory)
+    {
         // to check that the validated industry is calling this function or not
-        for (uint256 i = 0; i < industries.length; i += 1) {
-            if (
-                // check if the wallet address match with the validated industries wallet address
-                industries[i].industryWalletAddress == msg.sender &&
-                industries[i].industryWalletAddress == _industryWalletAddress
-            ) {
-                currentProductId += 1;
-                productInfo[_foodId].nameOfOwner = _nameOfOwner;
-                productInfo[_foodId].foodId = _foodId;
-                productInfo[_foodId].productAmount = _productAmount;
-                productInfo[_foodId]
-                    .productExpiurationDate = _productExpiurationDate;
-                productInfo[_foodId].currentProductId = currentProductId;
-                productInfo[_foodId].addedBy = msg.sender;
+        require(
+            _getIndustries(msg.sender),
+            "You don't have access to add product"
+        );
 
-                emit productAdded(
-                    _foodId,
-                    _productExpiurationDate,
-                    _nameOfOwner,
-                    _productAmount,
-                    currentProductId,
-                    msg.sender
-                );
-            } else {
-                // No Industry found with this ID and Name
-                revert("You are not permitted to add product info");
-            }
-        }
+        currentProductId += 1;
+        productInfo[_foodId].nameOfOwner = _nameOfOwner;
+        productInfo[_foodId].foodId = _foodId;
+        productInfo[_foodId].productAmount = _productAmount;
+        productInfo[_foodId].productExpiurationDate = _productExpiurationDate;
+        productInfo[_foodId].currentProductId = currentProductId;
+        productInfo[_foodId].addedBy = msg.sender;
+
+        // productAdded event call to notify all nodes in the blockchain
+        emit productAdded(
+            _foodId,
+            _productExpiurationDate,
+            _nameOfOwner,
+            _productAmount,
+            currentProductId,
+            msg.sender
+        );
+
+        return "Successfully added the product information in Blockchain. Cheers !!";
     }
 }
